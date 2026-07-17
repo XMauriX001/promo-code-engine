@@ -1,98 +1,154 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Promo Code Engine
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Un motor de validación y cálculo de descuentos para códigos promocionales desarrollado con NestJS y TypeScript, aplicando principios de arquitectura limpia (Clean Architecture), diseño guiado por el dominio (DDD) y patrones de diseño (Factory, Strategy, Decorator).
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+---
 
-## Description
+## Arquitectura y Diseño
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+El proyecto está estructurado con el objetivo de separar las reglas de negocio puras (Dominio) de los detalles de implementación (Infraestructura y Controladores).
 
-## Project setup
-
-```bash
-$ npm install
+```mermaid
+graph TD
+    Controller[PromoCodesController] -->|Adapta DTO| OrderRequest[OrderRequestAdapter]
+    Controller -->|Invoca| Engine[PromoCodeEngine]
+    Engine -->|Valida con| RuleFactory[ValidationRuleFactory]
+    Engine -->|Calcula con| StrategyFactory[DiscountStrategyFactory]
+    RuleFactory -->|Instancia| ConfigurableRules[Reglas Configurables]
+    StrategyFactory -->|Instancia| Strategies[Estrategias de Descuento]
+    
+    subgraph Dominio / Puertos
+        Engine -.->|Utiliza puerto| PCR[PromoCodeRepository]
+        RuleFactory -.->|Utiliza puerto| PCUR[PromoCodeUsageRepository]
+        RuleFactory -.->|Utiliza puerto| CH[CategoryHierarchy]
+    end
 ```
 
-## Compile and run the project
+### Patrones de Diseño Utilizados
+
+1. **Strategy Pattern (Patrón Estrategia)**
+   - Utilizado en las estrategias de cálculo de descuentos (`DiscountStrategyInterface`):
+     - `FixedDiscountStrategy`: Descuentos de monto fijo (ej. $10 USD de descuento).
+     - `PercentDiscountStrategy`: Descuentos porcentuales (ej. 10% de descuento).
+     - `TieredDiscountStrategy`: Descuentos escalonados basados en el historial del cliente (número de órdenes pagadas previas).
+2. **Decorator Pattern (Patrón Decorador)**
+   - Implementado en `MaxDiscountDecorator` para envolver cualquier estrategia de descuento y limitar dinámicamente el monto máximo descontado sin acoplar o modificar la lógica de las estrategias base.
+3. **Factory Pattern (Patrón Fábrica)**
+   - `ValidationRuleFactory`: Instancia reglas de validación configurables a partir de los datos almacenados en el código promocional.
+   - `DiscountStrategyFactory`: Instancia la estrategia de descuento adecuada de acuerdo con el tipo de código promocional y aplica decoradores de ser necesario.
+4. **Adapter Pattern (Patrón Adaptador)**
+   - `OrderRequestAdapter`: Convierte las peticiones HTTP entrantes (`ValidatePromoCodeDto`) en una abstracción limpia de dominio (`OrderableInterface`), independizando el motor de las estructuras de transporte HTTP.
+
+---
+
+## Reglas del Motor de Validación
+
+El proceso de validación del código se realiza en dos fases diferenciadas:
+
+### 1. Reglas Fijas (Fase 1 - Estáticas)
+Se evalúan siempre en orden prioritario. Si alguna falla, la validación se detiene inmediatamente:
+- **`CodeExistsRule`**: Comprueba si el código realmente existe en el sistema.
+- **`CodeActiveStatusRule`**: Comprueba que el estado del código sea `'active'`.
+- **`CodeTemporalValidityRule`**: Valida que la fecha actual esté dentro de la vigencia del código (`startDate` y `endDate`).
+
+### 2. Reglas Configurables (Fase 2 - Dinámicas)
+Se configuran individualmente en cada código promocional según los requisitos del negocio:
+- **`MinPurchaseRule`**: Exige un monto mínimo de compra en el subtotal.
+- **`EligibleCategoriesRule`**: Valida que la categoría de la compra esté dentro de las permitidas (o sea descendiente de una categoría elegible).
+- **`FirstOrderOnlyRule`**: Restringe el código únicamente para la primera compra exitosa del usuario.
+- **`UserUsageLimitRule`**: Limita la cantidad de veces que un usuario específico puede aplicar el código.
+- **`GlobalUsageLimitRule`**: Limita la cantidad total agregada de usos del código a nivel global en la plataforma.
+- **`GlobalAmountLimitRule`**: Limita el monto acumulado total de descuento otorgado por el código globalmente.
+- **`RestrictedUsageRule`**: Limita el código a un conjunto explícito de IDs de usuarios autorizados.
+
+---
+
+## Estructura del Directorio
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+src/
+├── contracts/                  # Interfaces del dominio y puertos para infraestructura
+├── controllers/                # Controladores HTTP y DTOs
+│   └── dtos/
+├── domain/                     # Entidades puras y objetos de valor del negocio
+│   ├── entities/
+│   └── ports/
+├── engine/                     # Servicio del orquestador del motor (PromoCodeEngine)
+├── infraestructure/            # Implementaciones en memoria de los repositorios y jerarquía
+├── rules/                      # Reglas de validación
+│   ├── configurable/           # Reglas opcionales/configurables
+│   └── fixed/                  # Reglas fijas obligatorias
+├── seeders/                    # Servicio para poblar datos de prueba (seeders)
+└── strategies/                 # Estrategias de cálculo de descuento y decoradores
 ```
 
-## Run tests
+---
 
+## Instalación y Ejecución
+
+### Prerrequisitos
+- Node.js (versión 18 o superior recomendada)
+- npm o yarn
+
+### Instalación
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+npm install
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
+### Ejecutar Servidor en Desarrollo
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+npm run start:dev
+```
+El servidor levantará en `http://localhost:3000`.
+
+---
+
+## Pruebas de Software (Testing)
+
+Se cuenta con una cobertura completa de pruebas unitarias y de integración utilizando **Jest**.
+
+Ejecutar todas las pruebas:
+```bash
+npm run test
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+Ejecutar pruebas con cobertura (coverage):
+```bash
+npm run test:cov
+```
 
-## Resources
+---
 
-Check out a few resources that may come in handy when working with NestJS:
+## Endpoints de la API
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+### Validar Código Promocional
+* **URL:** `/promo-codes/validate`
+* **Método:** `POST`
+* **Cuerpo de la Petición (`JSON`):**
+```json
+{
+  "code": "BLACKFRIDAY10",
+  "subtotal": 200,
+  "userId": "user-demo",
+  "categoryId": "digital-services",
+  "orderHistory": [
+    { "id": "order-1", "status": "paid", "categoryId": "digital-services" }
+  ]
+}
+```
 
-## Support
+* **Respuesta Exitosa (Código Válido):**
+```json
+{
+  "valid": true,
+  "discountAmount": 20
+}
+```
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+* **Respuesta de Código Inválido/Expirado:**
+```json
+{
+  "valid": false,
+  "errorCode": "MIN_AMOUNT_REQUIRED"
+}
+```
