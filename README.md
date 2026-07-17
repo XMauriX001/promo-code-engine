@@ -4,26 +4,6 @@ Un motor de validación y cálculo de descuentos para códigos promocionales des
 
 ---
 
-## Arquitectura y Diseño
-
-El proyecto está estructurado con el objetivo de separar las reglas de negocio puras (Dominio) de los detalles de implementación (Infraestructura y Controladores).
-
-```mermaid
-graph TD
-    Controller[PromoCodesController] -->|Adapta DTO| OrderRequest[OrderRequestAdapter]
-    Controller -->|Invoca| Engine[PromoCodeEngine]
-    Engine -->|Valida con| RuleFactory[ValidationRuleFactory]
-    Engine -->|Calcula con| StrategyFactory[DiscountStrategyFactory]
-    RuleFactory -->|Instancia| ConfigurableRules[Reglas Configurables]
-    StrategyFactory -->|Instancia| Strategies[Estrategias de Descuento]
-    
-    subgraph Dominio / Puertos
-        Engine -.->|Utiliza puerto| PCR[PromoCodeRepository]
-        RuleFactory -.->|Utiliza puerto| PCUR[PromoCodeUsageRepository]
-        RuleFactory -.->|Utiliza puerto| CH[CategoryHierarchy]
-    end
-```
-
 ### Patrones de Diseño Utilizados
 
 1. **Strategy Pattern (Patrón Estrategia)**
