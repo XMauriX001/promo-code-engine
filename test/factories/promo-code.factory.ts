@@ -8,7 +8,7 @@ let codeCounter = 0;
 
 export function makePromoCode(overrides: Partial<PromoCodeProps> = {}): PromoCode {
   codeCounter += 1;
-  const now = new Date();
+  const now = new Date('2026-07-16T12:00:00Z');
   const oneDay = 24 * 60 * 60 * 1000;
 
   const defaults: PromoCodeProps = {

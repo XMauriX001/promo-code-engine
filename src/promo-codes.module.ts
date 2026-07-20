@@ -27,6 +27,7 @@ import { PromoCodesController } from './controllers/promo-codes.controller';
 
 import { PromoCodesSeedService } from './seeders/promo-codes-seed.service';
 
+
 @Module({
   controllers: [PromoCodesController],
   providers: [
@@ -52,14 +53,16 @@ import { PromoCodesSeedService } from './seeders/promo-codes-seed.service';
     PromoCodeEngine,
 
 
-    { provide: PROMO_CODE_REPOSITORY, useClass: InMemoryPromoCodeRepository },
-    { provide: PROMO_CODE_USAGE_REPOSITORY, useClass: InMemoryPromoCodeUsageRepository },
-    { provide: CATEGORY_HIERARCHY, useClass: InMemoryCategoryHierarchy },
-    { provide: PromoCodesSeedService, useClass: PromoCodesSeedService },
+  
+    { provide: PROMO_CODE_REPOSITORY, useExisting: InMemoryPromoCodeRepository },
+    { provide: PROMO_CODE_USAGE_REPOSITORY, useExisting: InMemoryPromoCodeUsageRepository },
+    { provide: CATEGORY_HIERARCHY, useExisting: InMemoryCategoryHierarchy },
 
-
+    InMemoryPromoCodeRepository,
     InMemoryPromoCodeUsageRepository,
     InMemoryCategoryHierarchy,
+
+    PromoCodesSeedService,
   ],
 })
 export class PromoCodesModule {}

@@ -5,6 +5,7 @@ import { PromoCode } from '../domain/entities/promo-code';
  */
 
 export interface PromoCodeRepository {
+  save(promoCodeData: any): unknown;
   findByCode(code: string): PromoCode | null;
 }
 

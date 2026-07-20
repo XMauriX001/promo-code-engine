@@ -1,11 +1,27 @@
-import { Body, Controller, HttpCode, Post } from '@nestjs/common';
+import { Body, Controller, HttpCode, Post, Inject } from '@nestjs/common';
 import { PromoCodeEngine } from '../engine/promo-code-engine.service';
 import { ValidatePromoCodeDto } from './dtos/validate-promo-code.dto';
 import { OrderRequestAdapter } from './order-request.adapter';
+import { PROMO_CODE_REPOSITORY } from 'src/contracts/promo-code.repository';
+import type { PromoCodeRepository } from 'src/contracts/promo-code.repository';
 
 @Controller('promo-codes')
 export class PromoCodesController {
-  constructor(private readonly engine: PromoCodeEngine) {}
+  constructor(
+    private readonly engine: PromoCodeEngine,
+    @Inject(PROMO_CODE_REPOSITORY) private readonly promoCodeRepository: PromoCodeRepository,
+  ) {}
+
+  @Post('setup')
+  @HttpCode(201)
+  setupTestPromoCode(@Body() promoCodeData: any) {
+    this.promoCodeRepository.save(promoCodeData);
+    
+    return { 
+      message: 'Código configurado en memoria con éxito.', 
+      code: promoCodeData.code 
+    };
+  }
 
   @Post('validate')
   @HttpCode(200)
