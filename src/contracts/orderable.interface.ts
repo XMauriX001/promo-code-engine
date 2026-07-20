@@ -1,4 +1,4 @@
-import { OrderContext } from '../order.context';
+import { OrderContext } from "src/domain/entities/order.context";
 
 /**
  * Contrato de integración

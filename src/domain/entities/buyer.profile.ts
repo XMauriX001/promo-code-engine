@@ -1,4 +1,4 @@
-import { HistoricalOrder } from './historical.order';
+import { HistoricalOrder } from "../historical.order";
 
 export interface BuyerProfile {
   userId: string;
