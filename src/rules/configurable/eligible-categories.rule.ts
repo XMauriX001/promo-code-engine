@@ -19,7 +19,8 @@ export class EligibleCategoriesRule implements ValidationRuleInterface {
 
   validate(_code: PromoCode | null, order: OrderableInterface): ValidationResult {
     const { categoryId } = order.getOrderContext();
-    const isEligible = this.categoryHierarchy.isWithin(categoryId, this.params.categoryIds);
+    const categoryIds = this.params?.categoryIds ?? (this.params as any)?.categories ?? [];
+    const isEligible = this.categoryHierarchy.isWithin(categoryId, categoryIds);
     if (!isEligible) {
       return ValidationResult.fail(ErrorCode.INVALID_CODE);
     }

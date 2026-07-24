@@ -15,7 +15,7 @@ export class RestrictedUsageRule implements ValidationRuleInterface {
     if (!code) return ValidationResult.fail(ErrorCode.INVALID_CODE);
 
     const { buyerProfile } = order.getOrderContext();
-    if (!code.restrictedUserIds.includes(buyerProfile.userId)) {
+    if (!buyerProfile?.userId || !code.restrictedUserIds?.includes(buyerProfile.userId)) {
       return ValidationResult.fail(ErrorCode.RESTRICTED_USAGE);
     }
     return ValidationResult.ok();

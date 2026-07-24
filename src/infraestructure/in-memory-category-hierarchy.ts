@@ -10,7 +10,8 @@ export class InMemoryCategoryHierarchy implements CategoryHierarchy {
     this.parentToChildren.set(parentId, childIds);
   }
 
-  isWithin(categoryId: string, eligibleCategoryIds: string[]): boolean {
+  isWithin(categoryId?: string, eligibleCategoryIds?: string[]): boolean {
+    if (!categoryId || !eligibleCategoryIds || !Array.isArray(eligibleCategoryIds)) return false;
     if (eligibleCategoryIds.includes(categoryId)) return true;
 
     return eligibleCategoryIds.some((eligibleId) =>

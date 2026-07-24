@@ -12,7 +12,7 @@ import { ErrorCode } from 'src/domain/error-code';
 export class FirstOrderOnlyRule implements ValidationRuleInterface {
   validate(_code: PromoCode | null, order: OrderableInterface): ValidationResult {
     const { buyerProfile } = order.getOrderContext();
-    const hasPaidOrders = buyerProfile.orderHistory.some((o) => o.status === 'paid');
+    const hasPaidOrders = buyerProfile?.orderHistory?.some((o) => o.status === 'paid') ?? false;
     if (hasPaidOrders) {
       return ValidationResult.fail(ErrorCode.CODE_ALREADY_USED);
     }

@@ -31,4 +31,8 @@ export class InMemoryPromoCodeUsageRepository implements PromoCodeUsageRepositor
       .filter((u) => u.promoCodeId === promoCodeId && u.paid)
       .reduce((sum, u) => sum + u.discountAmount, 0);
   }
+
+  recordPaidUsage(promoCodeId: string, userId: string, discountAmount: number): void {
+    this.usages.push({ promoCodeId, userId, discountAmount, paid: true });
+  }
 }

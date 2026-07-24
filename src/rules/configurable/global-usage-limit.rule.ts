@@ -15,12 +15,13 @@ export class GlobalUsageLimitRule implements ValidationRuleInterface {
   constructor(
     private readonly params: { limit: number },
     private readonly usageRepository: PromoCodeUsageRepository,
-  ) {}
+  ) { }
 
   validate(code: PromoCode | null, _order: OrderableInterface): ValidationResult {
     if (!code) return ValidationResult.fail(ErrorCode.INVALID_CODE);
 
     const usages = this.usageRepository.countPaidUsagesGlobal(code.id);
+
     if (usages >= this.params.limit) {
       return ValidationResult.fail(ErrorCode.USAGE_LIMIT_REACHED);
     }
